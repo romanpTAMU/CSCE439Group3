@@ -1,14 +1,16 @@
 # this file is a test to create an attribute extractor to generate usefull features :D
 
+import argparse
 import os
 import re
+import math
+import pickle
+
 import lief
 import pefile
 import peutils
-import math
 import numpy as np
 import pandas as pd
-import pickle
 
 class PEAttributeExtractor():
 
@@ -237,34 +239,47 @@ class PEFeatureExtractor():
         return(self.features)
 
 
-input_file = "../MLSEC_2019_samples_and_variants/050"
-# input_file = "../MLSEC_2019_samples_and_variants/025_u008_s016"
+def process_directory(input_dir, output_csv):
+    """Extract attributes from all files in *input_dir* and save to *output_csv*.
 
-# input_file = "../MLSEC_2019_samples_and_variants/013_u008_s092"
- # feature extractor used
-nfs_extractor = os.path.dirname(__file__) + 'defender/models/nfs_behemot/nfs_extractor_tfidf.pkl'
-# scaler used
-nfs_scaler = os.path.dirname(__file__) + 'defender/models/nfs_behemot/nfs_scaler_minmax.pkl'
+    The output format is determined by the file extension. ``.parquet`` results
+    in a Parquet file; any other extension produces a CSV. Existing datasets are
+    appended to when possible.
+    """
+    rows = []
+    for root, _, files in os.walk(input_dir):
+        for name in files:
+            path = os.path.join(root, name)
+            try:
+                with open(path, "rb") as f:
+                    extractor = PEAttributeExtractor(f.read())
+                    attrs = extractor.extract()
+                    attrs["filepath"] = path
+                    rows.append(attrs)
+            except Exception as e:  # pylint: disable=broad-except
+                print(f"Error processing {path}: {e}")
 
-CLASSIFIER = "randomforest_100"
-# base name of classifiers
-nfs_clf_base_name = os.path.dirname(__file__) + "defender/models/nfs_behemot/nfs_classifier_{}.pkl".format(CLASSIFIER)
+    if not rows:
+        return
 
-# open file
-file = open(input_file, "rb")
-# read file and get its bytes
-bytez = file.read()
+    df = pd.DataFrame(rows)
 
-fe = PEFeatureExtractor(bytez, nfs_extractor, nfs_scaler)
+    if output_csv.lower().endswith(".parquet"):
+        if os.path.exists(output_csv):
+            existing = pd.read_parquet(output_csv)
+            df = pd.concat([existing, df], ignore_index=True)
+        df.to_parquet(output_csv, index=False)
+    else:
+        if os.path.exists(output_csv):
+            df.to_csv(output_csv, mode="a", header=False, index=False)
+        else:
+            df.to_csv(output_csv, index=False)
 
-# print(fe.extract_features())
 
-# # initialize attribute extraction
-# att_extraction = PEAttributeExtractor(bytez)
-# # extraact attributes
-# atts = att_extraction.extract()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract PE attributes from a directory")
+    parser.add_argument("--input", required=True, help="Directory containing PE files")
+    parser.add_argument("--output", required=True, help="Output CSV or Parquet file")
+    args = parser.parse_args()
 
-# print(atts.values())
-
-# atts = pd.DataFrame([atts.values()], columns=atts.keys())
-# print(atts[COLUMNS])
+    process_directory(args.input, args.output)

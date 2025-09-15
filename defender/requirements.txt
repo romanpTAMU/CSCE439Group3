@@ -6,3 +6,5 @@ annoy
 numpy
 tqdm
 pefile
+pandas
+lief
