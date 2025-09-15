@@ -64,10 +64,10 @@ Downloaded files are written under the `data/` directory:
 ### Dataset sizes and storage
 
 The SOREL-20M collection is substantial – the full dataset is roughly
-8 TB in size, so syncing the `processed-data` subset still requires
-hundreds of gigabytes of free disk space【0184f6†L61-L63】. The
-compressed DikeDataset archive is about 326 MB and expands to roughly
-half a gigabyte on disk【a77a8c†L1-L2】. Ensure that the machine used for
+8 TB in size, so syncing the `processed-data` subset still requires
+hundreds of gigabytes of free disk space. The
+compressed DikeDataset archive is about 326 MB and expands to roughly
+half a gigabyte on disk. Ensure that the machine used for
 training has adequate storage available before downloading.
 
 Run the script from the repository root:
