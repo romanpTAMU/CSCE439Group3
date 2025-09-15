@@ -61,11 +61,44 @@ Downloaded files are written under the `data/` directory:
 * `data/sorel-20m/processed-data` – SOREL-20M processed binaries
 * `data/DikeDataset` – contents of the DikeDataset repository
 
+### Dataset sizes and storage
+
+The SOREL-20M collection is substantial – the full dataset is roughly
+8 TB in size, so syncing the `processed-data` subset still requires
+hundreds of gigabytes of free disk space【0184f6†L61-L63】. The
+compressed DikeDataset archive is about 326 MB and expands to roughly
+half a gigabyte on disk【a77a8c†L1-L2】. Ensure that the machine used for
+training has adequate storage available before downloading.
+
 Run the script from the repository root:
 
 ```bash
 scripts/download_datasets.sh
 ```
+
+## Training the model
+
+After the datasets are available, train the Torch-based classifier:
+
+```bash
+python train/train_classifier.py
+```
+
+The script reads data from the `data/` directory and produces a model
+artifact for the defender service.
+
+## Running the service
+
+Build and launch the defender service with Docker:
+
+```bash
+docker build -t ember defender
+docker run -it -p 8080:8080 -v $(pwd)/data:/data ember
+```
+
+The `-v` flag mounts the host `data/` directory into the container so the
+service can access the downloaded datasets. The application listens on
+port `8080` and expects PE files via `POST /` requests.
 
 
 ## Contributing
