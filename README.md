@@ -45,6 +45,29 @@ Outline the file contents of the repository. It helps users navigate the codebas
 | `SECURITY.md` | Reporting security issues. |
 
 
+## Dataset Downloads
+
+Use the `scripts/download_datasets.sh` helper to retrieve the datasets
+used in this project. The script expects the following tools to be
+installed and available on your `PATH`:
+
+* [AWS CLI](https://aws.amazon.com/cli/) for syncing the public
+  SOREL-20M archives
+* `git` or `curl` for fetching the DikeDataset repository
+* `unzip` for extracting archives when `curl` is used
+
+Downloaded files are written under the `data/` directory:
+
+* `data/sorel-20m/processed-data` – SOREL-20M processed binaries
+* `data/DikeDataset` – contents of the DikeDataset repository
+
+Run the script from the repository root:
+
+```bash
+scripts/download_datasets.sh
+```
+
+
 ## Contributing
 
 This project welcomes contributions and suggestions, during or after the competition.  Most contributions require you to agree to a
