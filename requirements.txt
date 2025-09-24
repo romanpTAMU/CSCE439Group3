@@ -3,7 +3,7 @@ flask>=2.0.0
 numpy>=1.21.0
 xgboost>=1.6.0
 scikit-learn>=1.0.0
-lief==0.9.0
+lief
 tqdm>=4.31.0
 pandas>=0.24.2
 lightgbm>=2.2.3
