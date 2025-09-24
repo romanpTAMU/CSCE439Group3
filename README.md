@@ -1,60 +1,134 @@
-<!--
----
-page_type: sample
-languages:
-- python
-description: "2020 Machine Learning Security Evasion Competition Sample Code"
-urlFragment: "Azure/2020-machine-learning-security-evasion-competition"
----
--->
+# XGBoost Malware Detection API
 
-# This is a fork/copy version of the original repository.
+A Flask-based web service that uses XGBoost and EMBER features to classify Windows PE executables as malicious or benign.
 
-# 2020 Machine Learning Security Evasion Competition
+## Overview
 
-<!-- 
-Guidelines on README format: https://review.docs.microsoft.com/help/onboard/admin/samples/concepts/readme-template?branch=master
+This project implements a machine learning pipeline that:
+1. Extracts 2381-dimensional feature vectors from PE files using EMBER
+2. Trains an XGBoost classifier on pre-processed feature data
+3. Serves predictions via a REST API that returns only binary labels
 
-Guidance on onboarding samples to docs.microsoft.com/samples: https://review.docs.microsoft.com/help/onboard/admin/samples/process/onboarding?branch=master
+## Architecture
 
-Taxonomies for products and languages: https://review.docs.microsoft.com/new-hope/information-architecture/metadata/taxonomies?branch=master
--->
+- **Feature Extraction**: EMBER (Elastic Malware Benchmark) extracts static PE features
+- **Model**: XGBoost binary classifier trained on 4M+ samples
+- **API**: Flask server with `/predict` endpoint accepting file uploads
+- **Output**: Returns only `{"label": 0|1}` (0=benign, 1=malicious)
 
-This repository contains code samples for the 2020 Machine Learning Security Evasion Competition.  Participants must register at [https://mlsec.io](https://mlsec.io) and accept the terms of service in order to participate.
+## Setup
 
-## Dates
-| Challenge         | Start Date                  |  End Date          |
-|-------------------|-----------------------------|--------------------|
-| [defender](https://github.com/Azure/2020-machine-learning-security-evasion-competition/tree/master/defender)   | Jun 15, 2020 (AoE) | Jul 23, 2020 (AoE) |
-| [attacker](https://github.com/Azure/2020-machine-learning-security-evasion-competition/tree/master/attacker)   | Aug 6, 2020 (AoE) | Sep 18, 2020 (AoE) |
+### 1. Install Dependencies
 
-*start and end times are Anywhere on Earth (AoE)
+```bash
+pip install -r requirements.txt
+```
 
+### 2. Download Training Data (Optional - for retraining)
 
-## Contents
+The feature files are not included in the repository due to size. Download them using AWS CLI if you want to retrain the model:
 
-Outline the file contents of the repository. It helps users navigate the codebase, build configuration and any related assets.
+```bash
+# Install AWS CLI if not already installed
+pip install awscli
 
-| File/folder       | Description                                    |
-|-------------------|------------------------------------------------|
-| `defender`        | Sample source code for the defender challenge. |
-| `attacker`        | Sample source code for the attacker challenge. |
-| `README.md`       | This README file.                              |
-| `LICENSE`         | The license for the sample code.               |
-| `CODE_OF_CONDUCT.md` | Microsoft's open source code of conduct. |
-| `SECURITY.md` | Reporting security issues. |
+# Download training features (4.2M samples, ~2GB)
+aws s3 cp s3://your-bucket/defender/models/features/test-features.npz defender/models/features/
 
+# Download validation features (2.5M samples, ~1.2GB)  
+aws s3 cp s3://your-bucket/defender/models/features/validation-features.npz defender/models/features/
+```
 
-## Contributing
+### 3. Train the Model (Optional - pre-trained model included)
 
-This project welcomes contributions and suggestions, during or after the competition.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+A pre-trained model is included in the repository. To retrain:
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+```bash
+python defender/models/train_xgb.py
+```
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+This will:
+- Load training data from `test-features.npz` (subsampled to 150k samples)
+- Load validation data from `validation-features.npz` (subsampled to 100k samples)
+- Train XGBoost with early stopping
+- Save model to `defender/models/xgb_model.json`
+- Print validation metrics (accuracy, precision, recall, F1, FPR, TPR)
+
+### 4. Run the Server
+
+```bash
+python -m defender
+```
+
+Server starts on `http://localhost:8000`
+
+## API Usage
+
+### Health Check
+```bash
+curl http://localhost:8000/health
+```
+
+### Predict Malware
+```bash
+# Upload a PE file for classification
+curl -F "file=@path/to/executable.exe" http://localhost:8000/predict
+
+# Response: {"label": 0} or {"label": 1}
+```
+
+## Docker Deployment
+
+### Build Image
+```bash
+docker build -t xgboost-malware-detector .
+```
+
+### Run Container
+```bash
+docker run -p 8000:8000 xgboost-malware-detector
+```
+
+## File Structure
+
+```
+├── defender/
+│   ├── __main__.py              # Flask server
+│   ├── inference_service.py     # Feature extraction + scoring
+│   └── models/
+│       ├── train_xgb.py         # Training script
+│       ├── predict_xgb.py       # Model loader/predictor
+│       ├── xgb_model.json       # Trained model (generated)
+│       └── features/            # Training data (download required)
+│           ├── test-features.npz
+│           └── validation-features.npz
+├── requirements.txt             # Python dependencies
+├── Dockerfile                   # Container definition
+└── README.md                   # This file
+```
+
+## Model Performance
+
+The XGBoost model achieves:
+- **Validation Accuracy**: ~97.6%
+- **Validation Precision**: ~97.4%
+- **Validation Recall**: ~96.4%
+- **Validation F1**: ~96.9%
+- **False Positive Rate**: ~1.6%
+- **True Positive Rate**: ~96.4%
+
+## Dependencies
+
+- **Flask**: Web framework
+- **XGBoost**: Machine learning model
+- **EMBER**: PE feature extraction
+- **LIEF**: PE file parsing
+- **NumPy/SciKit-Learn**: Numerical operations
+- **Pandas**: Data manipulation
+
+## Notes
+
+- The API returns only binary labels to avoid exposing model internals
+- Feature extraction applies compatibility shims for numpy/lief/sklearn
+- Training uses subsampling to manage memory usage
+- Model supports early stopping and best iteration selection
