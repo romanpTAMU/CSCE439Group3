@@ -1,4 +1,4 @@
-FROM python:3.9-slim
+FROM python:3.9
 
 #############################
 # INSTALL PYTHON DEPENDENCIES
@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir -r docker-requirements.txt \
 #############################
 
 # rebase to make a smaller image
-FROM python:3.9-slim
+FROM python:3.9
 
 # required libgomp1 for ember
 RUN apt-get -o Acquire::Max-FutureTime=100000 update \
@@ -40,8 +40,8 @@ COPY defender /opt/defender/defender
 # SETUP ENVIRONMENT
 #############################
 
-# open port 8000
-EXPOSE 8000
+# open port 8080 (competition requirement)
+EXPOSE 8080
 
 # add a defender user and switch user
 RUN groupadd -r defender && useradd --no-log-init -r -g defender defender
@@ -53,7 +53,7 @@ WORKDIR /opt/defender/
 # update environmental variables
 ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/opt/defender"
-ENV PORT=8000
+ENV PORT=8080
 
 #############################
 # RUN CODE
@@ -63,6 +63,6 @@ CMD ["python","-m","defender"]
 ## TO BUILD IMAGE:
 # docker build -t xgboost-malware-detector .
 ## TO RUN IMAGE:
-# docker run -itp 8000:8000 xgboost-malware-detector
+# docker run -itp 8080:8080 xgboost-malware-detector
 ## TO TEST:
-# curl -F "file=@executable.exe" http://localhost:8000/predict
+# curl -X POST -H "Content-Type: application/octet-stream" --data-binary "@executable.exe" http://localhost:8080/

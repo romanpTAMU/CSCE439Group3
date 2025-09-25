@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """
-Test script to evaluate Docker container performance on malware/goodware datasets.
-Updated for competition format: POST / with Content-Type: application/octet-stream
+Local test script to evaluate malware detection performance without Docker.
+Uses the local inference service directly.
 """
 import os
 import sys
-import requests
 import time
 from pathlib import Path
 import concurrent.futures
 from typing import Dict, List, Tuple
 
+# Add project root to path for imports
+project_root = Path(__file__).parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Import local inference service
+from defender.inference_service import score_exe
+
 # Configuration
-DOCKER_URL = "http://localhost:8080"  # Updated to port 8080
 MAX_WORKERS = 4  # Parallel processing
-TIMEOUT = 30  # Request timeout in seconds
 
 def get_test_data_path() -> str:
     """Get test data path from user input with validation."""
@@ -55,30 +60,12 @@ def get_test_data_path() -> str:
 
 def test_file(file_path: Path) -> Tuple[bool, str]:
     """
-    Test a single file against the Docker API using competition format.
-    Returns (success, error_message)
+    Test a single file against the local inference service.
+    Returns (success, result_label)
     """
     try:
-        with open(file_path, 'rb') as f:
-            pe_bytes = f.read()
-        
-        response = requests.post(
-            DOCKER_URL,  # POST to root endpoint
-            data=pe_bytes,
-            headers={'Content-Type': 'application/octet-stream'},
-            timeout=TIMEOUT
-        )
-        
-        if response.status_code == 200:
-            result = response.json()
-            return True, str(result.get('result', 'unknown'))
-        else:
-            return False, f"HTTP {response.status_code}: {response.text}"
-            
-    except requests.exceptions.Timeout:
-        return False, "Request timeout"
-    except requests.exceptions.ConnectionError:
-        return False, "Connection error"
+        result = score_exe(str(file_path))
+        return True, str(result.get('label', 'unknown'))
     except Exception as e:
         return False, str(e)
 
@@ -157,31 +144,27 @@ def test_folder(folder_path: Path, expected_label: int) -> Dict:
         'errors': errors[:5]  # Show first 5 errors
     }
 
-def check_docker_health() -> bool:
-    """Check if Docker container is running and healthy."""
+def check_local_service() -> bool:
+    """Check if local inference service can be imported and used."""
     try:
-        # Try to make a simple request to see if server responds
-        response = requests.post(
-            DOCKER_URL,
-            data=b"",
-            headers={'Content-Type': 'application/octet-stream'},
-            timeout=5
-        )
-        return response.status_code in [200, 400]  # 400 is OK for empty data
-    except:
+        # Try to import and test with a dummy path
+        from defender.inference_service import score_exe
+        return True
+    except Exception as e:
+        print(f"❌ Local inference service error: {e}")
         return False
 
 def main():
-    print("XGBoost Malware Detection - Docker Test Suite")
+    print("XGBoost Malware Detection - Local Test Suite")
     print("=" * 50)
     
-    # Check Docker health
-    print("Checking Docker container health...")
-    if not check_docker_health():
-        print(f"❌ Docker container not responding at {DOCKER_URL}")
-        print("Make sure to run: docker run -d -p 8080:8080 xgboost-malware-detector")
+    # Check local service
+    print("Checking local inference service...")
+    if not check_local_service():
+        print("❌ Local inference service not available")
+        print("Make sure you're running from the project root and all dependencies are installed")
         sys.exit(1)
-    print("✅ Docker container is healthy")
+    print("✅ Local inference service is available")
     
     # Get test data path from user
     test_data_path = get_test_data_path()

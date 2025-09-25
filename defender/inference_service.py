@@ -5,6 +5,12 @@ import numpy as np
 
 # Apply runtime compatibility shims (modeled after test_ember_simple_fix)
 def apply_runtime_fixes():
+    # Install EMBER↔LIEF shims (exception mapping, logger level, minor attribute compat)
+    try:
+        from defender.ember_compat import apply_ember_lief_shims  # type: ignore
+        apply_ember_lief_shims()
+    except Exception:
+        pass
     import numpy as _np
     if not hasattr(_np, 'int'):
         _np.int = int  # type: ignore[attr-defined]
@@ -109,14 +115,8 @@ def extract_features_from_exe(exe_path: str) -> np.ndarray:
 
 def score_exe(exe_path: str, threshold: float = 0.5) -> dict:
     try:
-        # Robust import whether run as a module or a script
-        try:
-            from defender.models.predict_xgb import predict_proba, predict_label  # type: ignore
-        except Exception:
-            root = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
-            if root not in sys.path:
-                sys.path.insert(0, os.path.abspath(os.path.join(root, os.pardir)))
-            from defender.models.predict_xgb import predict_proba, predict_label  # type: ignore
+        # Import prediction functions
+        from defender.models.predict_xgb import predict_proba
         
         X = extract_features_from_exe(exe_path)
         prob = float(predict_proba(X)[0])
@@ -143,5 +143,3 @@ def _cli():
 
 if __name__ == "__main__":
     _cli()
-
-

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """
 Main entry point for the defender application.
+Competition format: POST / with Content-Type: application/octet-stream
+Returns {"result": 0} for benign, {"result": 1} for malicious
 """
 
 import os
@@ -12,35 +14,41 @@ root_dir = Path(__file__).parent
 if str(root_dir) not in sys.path:
     sys.path.insert(0, str(root_dir))
 
-# Minimal Flask webserver that accepts an uploaded EXE and returns ONLY the label
+# Competition-compliant Flask webserver
 try:
     from flask import Flask, request, jsonify
     app = Flask(__name__)
 
-    @app.route('/health', methods=['GET'])
-    def health():
-        return 'ok', 200
-
-    @app.route('/predict', methods=['POST'])
+    @app.route('/', methods=['POST'])
     def predict_route():
-        # Expect a file field named 'file'
-        if 'file' not in request.files:
-            return jsonify({"error": "missing file"}), 400
-        f = request.files['file']
-        if f.filename == '':
-            return jsonify({"error": "empty filename"}), 400
-        # Save to a temporary path (Windows-safe: don't keep file open while saving)
-        import tempfile, os
+        """
+        Competition endpoint: POST / with Content-Type: application/octet-stream
+        Returns {"result": 0} for benign, {"result": 1} for malicious
+        """
+        # Check content type
+        if request.content_type != 'application/octet-stream':
+            return jsonify({"result": 0}), 400  # Default to benign on error
+        
+        # Get raw bytes from request body
+        pe_bytes = request.get_data()
+        if not pe_bytes:
+            return jsonify({"result": 0}), 400  # Default to benign on error
+        
+        # Save to temporary file
+        import tempfile
         fd, tmp_path = tempfile.mkstemp(suffix='.exe')
         os.close(fd)
         try:
-            f.save(tmp_path)
+            with open(tmp_path, 'wb') as f:
+                f.write(pe_bytes)
+            
             from defender.inference_service import score_exe
             res = score_exe(tmp_path)
-            # Return label only to avoid leaking model details
-            return jsonify({"label": int(res["label"])})
+            # Return competition format: {"result": 0|1}
+            return jsonify({"result": int(res["label"])})
         except Exception as e:
-            return jsonify({"error": str(e)}), 500
+            # Default to benign on any error (competition requirement)
+            return jsonify({"result": 0}), 500
         finally:
             try:
                 os.remove(tmp_path)
@@ -48,7 +56,8 @@ try:
                 pass
 
     def run_server():
-        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', '8000')))
+        # Competition requirement: listen on port 8080
+        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', '8080')))
 except Exception:
     # Flask might not be installed in some environments; ignore server setup
     def run_server():
