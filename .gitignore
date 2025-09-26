@@ -39,6 +39,7 @@ venv.bak/
 *.swp
 *.swo
 *~
+*.tar
 
 # OS
 .DS_Store

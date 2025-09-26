@@ -1,0 +1,7 @@
+# Minimal dependencies for XGBoost + EMBER + Flask prediction pipeline
+# Only includes what's needed for prediction and webserver (no training dependencies)
+flask>=2.0.0
+numpy>=1.21.0
+xgboost>=1.6.0
+scikit-learn>=1.0.0
+lief>=0.12.0
