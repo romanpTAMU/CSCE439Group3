@@ -1,0 +1,81 @@
+# Root dockerignore to shrink build context
+
+.git
+.gitignore
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.log
+*.tmp
+*.temp
+
+# Large artifacts not needed in image
+group3-detector.tar
+
+# Feature datasets
+defender/models/features/*.npz
+defender/models/features/**/*.npz
+defender/models/features/test-features.npz
+defender/models/features/validation-features.npz
+
+# Tests are not required in runtime image
+test/
+test_*.py
+
+# Exclude large or unnecessary artifacts from Docker build context
+
+# Git and Python cache
+.git
+__pycache__
+*.pyc
+
+# Do not include detector tarball
+group3-detector.tar
+
+# Do not include local feature datasets
+defender/models/features/test-features.npz
+defender/models/features/validation-features.npz
+
+# Exclude large training data files
+defender/models/features/*.npz
+
+# Exclude development files
+.git/
+.gitignore
+README.md
+requirements.txt
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Exclude test files
+test/
+*.log
+*.tmp
+*.temp
+
+# Keep only the essential files for runtime:
+# - defender/__main__.py
+# - defender/inference_service.py  
+# - defender/models/predict_xgb.py
+# - defender/models/xgb_model.json

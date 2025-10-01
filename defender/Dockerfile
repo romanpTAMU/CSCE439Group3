@@ -34,8 +34,8 @@ RUN apt-get -o Acquire::Max-FutureTime=100000 update \
 # copy python virtual env (all dependencies) from previous image
 COPY --from=0 /opt/venv /opt/venv
 
-# copy defender code to /opt/defender/defender
-COPY defender /opt/defender/defender
+# copy defender code (this directory) to /opt/defender/defender
+COPY . /opt/defender/defender
 
 #############################
 # SETUP ENVIRONMENT

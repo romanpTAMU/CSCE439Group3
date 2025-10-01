@@ -1,0 +1,49 @@
+# Exclude large or unnecessary artifacts from Docker build context
+
+# Git and Python cache
+.git
+__pycache__
+*.pyc
+
+# Do not include detector tarball
+group3-detector.tar
+
+# Do not include local feature datasets (context is defender/)
+models/features/test-features.npz
+models/features/validation-features.npz
+
+# Exclude all feature archives and large files
+models/features/*.npz
+models/features/**/*.npz
+models/features/
+
+# Exclude development files
+.git/
+.gitignore
+README.md
+requirements.txt
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Exclude test files (not present in defender/, but safe)
+test/
+*.log
+*.tmp
+*.temp
+
+# Keep only the essential files for runtime:
+# - defender/__main__.py
+# - defender/inference_service.py  
+# - defender/models/predict_xgb.py
+# - defender/models/xgb_model.json
